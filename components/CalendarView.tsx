@@ -21,7 +21,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({ currentDate, transactions, 
   const blanks = Array.from({ length: startingDay }, (_, i) => i);
 
   const getDayStats = (day: number) => {
-    if (!transactions) return { income: 0, expense: 0, hasTx: false };
+    if (!transactions) return { income: 0, expense: 0, overtime: 0, hasTx: false };
     
     const dayTx = transactions.filter(t => {
       const d = new Date(t.date);
@@ -30,8 +30,9 @@ const CalendarView: React.FC<CalendarViewProps> = ({ currentDate, transactions, 
 
     const income = dayTx.filter(t => t.type === 'income').reduce((acc, t) => acc + (t.amount || 0), 0);
     const expense = dayTx.filter(t => t.type === 'expense').reduce((acc, t) => acc + (t.amount || 0), 0);
+    const overtime = dayTx.filter(t => t.category === 'Mesai' || t.group === 'Mesai').reduce((acc, t) => acc + (t.amount || 0), 0);
 
-    return { income, expense, hasTx: dayTx.length > 0 };
+    return { income, expense, overtime, hasTx: dayTx.length > 0 };
   };
 
   const weekDays = language === 'tr' 
@@ -39,8 +40,8 @@ const CalendarView: React.FC<CalendarViewProps> = ({ currentDate, transactions, 
     : ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
   return (
-    <div className={`rounded-[2rem] p-4 shadow-sm border animate-in fade-in zoom-in-95 duration-300 ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'}`}>
-      <div className={`grid grid-cols-7 gap-1 mb-2 text-center border-b pb-2 ${darkMode ? 'border-gray-700' : 'border-gray-50'}`}>
+    <div className={`w-full animate-in fade-in zoom-in-95 duration-300`}>
+      <div className={`grid grid-cols-7 gap-1 mb-2 text-center border-b pb-2 ${darkMode ? 'border-gray-700' : 'border-gray-100'}`}>
         {weekDays.map(d => (
           <div key={d} className="text-[10px] font-black text-gray-400 uppercase">{d}</div>
         ))}
@@ -57,7 +58,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({ currentDate, transactions, 
             <div 
               key={day} 
               onClick={() => onDateClick(day)}
-              className={`aspect-square flex flex-col items-center justify-start pt-1 relative transition-all hover:scale-105 active:scale-95 cursor-pointer rounded-xl
+              className={`aspect-square flex flex-col items-center justify-start pt-1 relative transition-all hover:scale-105 active:scale-95 cursor-pointer rounded-2xl
                 ${isToday 
                   ? (darkMode ? 'bg-white text-black' : 'bg-black text-white') 
                   : (darkMode ? 'text-gray-300 hover:bg-gray-700' : 'text-gray-700 hover:bg-gray-50')
@@ -68,7 +69,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({ currentDate, transactions, 
                 {day}
               </span>
               
-              <div className="flex flex-col items-center justify-start w-full mt-0.5">
+              <div className="flex flex-col items-center justify-start w-full mt-0.5 gap-0.5">
                 {stats.income > 0 && (
                   <span className="text-[9px] font-bold text-green-500 leading-tight">
                     +{Math.round(stats.income)}
@@ -78,6 +79,9 @@ const CalendarView: React.FC<CalendarViewProps> = ({ currentDate, transactions, 
                   <span className="text-[9px] font-bold text-red-500 leading-tight">
                     -{Math.round(stats.expense)}
                   </span>
+                )}
+                {stats.overtime > 0 && (
+                    <div className="w-1.5 h-1.5 rounded-full bg-indigo-500 mt-0.5"></div>
                 )}
               </div>
             </div>

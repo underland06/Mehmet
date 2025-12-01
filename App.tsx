@@ -3,7 +3,7 @@ import {
   Wallet, TrendingUp, TrendingDown, Settings, Plus, ChevronLeft, ChevronRight, 
   Calendar as CalendarIcon, Repeat, DollarSign, PieChart, Home, Trash2, Edit2, X, 
   Briefcase, AlertTriangle, Globe, CalendarDays, Clock, Calculator, Bell, Check, 
-  Layers, Moon, Sun, Coffee, ChevronDown
+  Layers, Moon, Sun, Coffee, ChevronDown, RotateCcw
 } from 'lucide-react';
 
 import { Transaction, GroupedTransactions, Recurrence } from './types';
@@ -22,6 +22,9 @@ export default function FinanceApp() {
     const saved = localStorage.getItem('finance_darkMode');
     return saved ? JSON.parse(saved) : false;
   });
+
+  // SPLASH SCREEN STATE
+  const [showSplash, setShowSplash] = useState(true);
 
   // ONBOARDING STATE
   const [showOnboarding, setShowOnboarding] = useState<boolean>(() => {
@@ -87,6 +90,7 @@ export default function FinanceApp() {
   const [showModal, setShowModal] = useState(false);
   const [showOvertimeModal, setShowOvertimeModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showResetModal, setShowResetModal] = useState(false); // Reset Modal State
   const [showGroupModal, setShowGroupModal] = useState(false);
   
   const [newGroupName, setNewGroupName] = useState('');
@@ -119,6 +123,14 @@ export default function FinanceApp() {
 
   // --- EFFECT ---
   
+  // Splash Screen Timer
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setShowSplash(false);
+    }, 1500); // 1.5 seconds splash screen
+    return () => clearTimeout(timer);
+  }, []);
+
   useEffect(() => {
     setIsAnimating(true);
     const timer = setTimeout(() => setIsAnimating(false), 300);
@@ -159,6 +171,7 @@ export default function FinanceApp() {
         }
 
       if (existingIndex !== -1) {
+        // Update existing
         const updated = [...prev];
         updated[existingIndex] = {
           ...updated[existingIndex],
@@ -167,6 +180,7 @@ export default function FinanceApp() {
         };
         return updated;
       } else {
+        // Create new
         const newTx: Transaction = {
           id: Date.now(),
           title: t.salaryTxTitle,
@@ -183,6 +197,16 @@ export default function FinanceApp() {
       }
     });
   };
+
+  // Automatically update salary transaction when settings change
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (monthlyNetSalary && parseNumber(monthlyNetSalary) > 0) {
+        updateSalaryTransaction(monthlyNetSalary);
+      }
+    }, 800); // Debounce update
+    return () => clearTimeout(timer);
+  }, [monthlyNetSalary, salaryDay]);
   
   const handleFinishOnboarding = () => {
     localStorage.setItem('finance_onboarding_complete', 'true');
@@ -195,6 +219,13 @@ export default function FinanceApp() {
   const handleSkipOnboarding = () => {
       localStorage.setItem('finance_onboarding_complete', 'true');
       setShowOnboarding(false);
+  };
+
+  const performAppReset = () => {
+    // Clear all local storage for the app
+    localStorage.clear();
+    // Reload to reset state
+    window.location.reload();
   };
 
   useEffect(() => {
@@ -316,14 +347,14 @@ export default function FinanceApp() {
         const d = new Date(t.date);
         return t.type === 'expense' && d >= today && d <= targetDate;
       })
-      .sort((a, b) => new Date(a.date) - new Date(b.date));
+      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
   }, [transactions, reminderDays]);
 
   const groupedTransactions: GroupedTransactions = useMemo(() => {
     const currentMonthTx = transactions.filter(t => {
       const d = new Date(t.date);
       return d.getMonth() === currentDate.getMonth() && d.getFullYear() === currentDate.getFullYear();
-    }).sort((a, b) => new Date(b.date) - new Date(a.date));
+    }).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
     // Properly typed accumulator to avoid 'any' issues in arithmetic operations
     interface GroupData {
@@ -337,15 +368,17 @@ export default function FinanceApp() {
 
     currentMonthTx.forEach(tx => {
       if (tx.group) {
-        if (!groups[tx.group]) {
-          groups[tx.group] = {
+        let group = groups[tx.group];
+        if (!group) {
+          group = {
             name: tx.group,
             total: 0,
             items: []
           };
+          groups[tx.group] = group;
         }
-        groups[tx.group].items.push(tx);
-        groups[tx.group].total += (tx.type === 'income' ? (tx.amount || 0) : -(tx.amount || 0));
+        group.items.push(tx);
+        group.total += (tx.type === 'income' ? (tx.amount || 0) : -(tx.amount || 0));
       } else {
         singles.push(tx);
       }
@@ -466,12 +499,6 @@ export default function FinanceApp() {
     setMonthlyNetSalary(formatted);
   };
   
-  const handleSalaryBlur = () => {
-    if (monthlyNetSalary && parseNumber(monthlyNetSalary) > 0) {
-      updateSalaryTransaction(monthlyNetSalary);
-    }
-  };
-
   const toggleSettingAccordion = (settingId: string) => {
     setExpandedSetting(expandedSetting === settingId ? null : settingId);
   };
@@ -517,7 +544,7 @@ export default function FinanceApp() {
   );
 
   const HomeScreen = () => (
-    <div className={`space-y-6 pb-28 transition-all duration-300 ease-in-out ${isAnimating ? 'opacity-0 translate-y-4' : 'opacity-100 translate-y-0'}`}>
+    <div className={`space-y-6 pb-32 transition-all duration-300 ease-in-out ${isAnimating ? 'opacity-0 translate-y-4' : 'opacity-100 translate-y-0'}`}>
       <Card className={cardClass}>
         <div className={`flex items-center justify-between mb-6 p-1.5 rounded-full ${darkMode ? 'bg-gray-700' : 'bg-gray-50'}`}>
           <button onClick={() => changeMonth(-1)} className={`w-10 h-10 flex items-center justify-center rounded-full shadow-sm hover:scale-105 transition-transform ${darkMode ? 'bg-gray-600 text-gray-300' : 'bg-white text-gray-600'}`}><ChevronLeft size={20} /></button>
@@ -582,7 +609,7 @@ export default function FinanceApp() {
   );
 
   const AnalysisScreen = () => (
-    <div className={`space-y-6 pb-24 transition-all duration-300 ease-in-out ${isAnimating ? 'opacity-0 translate-y-4' : 'opacity-100 translate-y-0'}`}>
+    <div className={`space-y-6 pb-32 transition-all duration-300 ease-in-out ${isAnimating ? 'opacity-0 translate-y-4' : 'opacity-100 translate-y-0'}`}>
       <header className="px-2"><h1 className="text-2xl font-black">{t.analysisTitle}</h1><p className="text-sm opacity-60">{t.analysisSubtitle}</p></header>
       <Card className={cardClass}>
         <div className="flex justify-between items-end mb-8">
@@ -605,20 +632,80 @@ export default function FinanceApp() {
     </div>
   );
 
-  const CalendarScreen = () => (
-    <div className={`space-y-6 pb-24 transition-all duration-300 ease-in-out ${isAnimating ? 'opacity-0 translate-y-4' : 'opacity-100 translate-y-0'}`}>
-      <header className="px-2"><h1 className="text-2xl font-black">{t.calendarTitle}</h1><p className="text-sm opacity-60">{t.calendarSubtitle}</p></header>
-      <div className={`flex items-center justify-between p-4 rounded-[2rem] shadow-sm border ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'}`}>
-        <button onClick={() => changeMonth(-1)} className={`p-2 rounded-full hover:bg-white/10 ${darkMode ? 'text-gray-300' : 'text-gray-600 hover:bg-gray-100'}`}><ChevronLeft size={20} /></button>
-        <span className="font-black text-lg uppercase">{new Intl.DateTimeFormat(language === 'tr' ? 'tr-TR' : 'en-US', { month: 'long', year: 'numeric' }).format(currentDate)}</span>
-        <button onClick={() => changeMonth(1)} className={`p-2 rounded-full hover:bg-white/10 ${darkMode ? 'text-gray-300' : 'text-gray-600 hover:bg-gray-100'}`}><ChevronRight size={20} /></button>
+  const CalendarScreen = () => {
+    // Calculate total overtime for the current month
+    const currentMonthOvertime = useMemo(() => {
+        if (!transactions) return 0;
+        return transactions
+            .filter(t => {
+                const d = new Date(t.date);
+                return d.getMonth() === currentDate.getMonth() && 
+                       d.getFullYear() === currentDate.getFullYear() &&
+                       (t.category === 'Mesai' || t.group === 'Mesai');
+            })
+            .reduce((sum, t) => sum + (t.amount || 0), 0);
+    }, [transactions, currentDate]);
+
+    return (
+      <div className={`space-y-6 pb-32 transition-all duration-300 ease-in-out ${isAnimating ? 'opacity-0 translate-y-4' : 'opacity-100 translate-y-0'}`}>
+        <header className="px-2">
+            <h1 className="text-2xl font-black">{t.calendarTitle}</h1>
+            <p className="text-sm opacity-60">{t.calendarSubtitle}</p>
+        </header>
+
+        {/* Calendar Card */}
+        <div className={`rounded-[2.5rem] shadow-sm border overflow-hidden ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'}`}>
+            <div className={`p-6 flex items-center justify-between border-b ${darkMode ? 'border-gray-700' : 'border-gray-50'}`}>
+                 <button onClick={() => changeMonth(-1)} className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-colors ${darkMode ? 'bg-gray-700 text-gray-300 hover:bg-gray-600' : 'bg-gray-50 text-gray-600 hover:bg-gray-100'}`}><ChevronLeft size={24} /></button>
+                 <div className="text-center">
+                    <span className="text-xs font-bold uppercase tracking-widest opacity-60 block mb-1">{currentDate.getFullYear()}</span>
+                    <span className="font-black text-xl uppercase tracking-tight">{new Intl.DateTimeFormat(language === 'tr' ? 'tr-TR' : 'en-US', { month: 'long' }).format(currentDate)}</span>
+                </div>
+                <button onClick={() => changeMonth(1)} className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-colors ${darkMode ? 'bg-gray-700 text-gray-300 hover:bg-gray-600' : 'bg-gray-50 text-gray-600 hover:bg-gray-100'}`}><ChevronRight size={24} /></button>
+            </div>
+            <div className="p-6">
+                <CalendarView currentDate={currentDate} transactions={transactions} currency={currency} language={language} onDateClick={handleDateClick} darkMode={darkMode} />
+            </div>
+        </div>
+
+        {/* Overtime Widget */}
+         <div className={`relative overflow-hidden rounded-[2.5rem] p-6 border shadow-sm group cursor-pointer transition-all hover:scale-[1.01] active:scale-[0.99] ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'}`}
+             onClick={() => { setOvertimeDate(new Date()); setShowOvertimeModal(true); }}>
+            
+            <div className={`absolute top-0 right-0 w-32 h-32 bg-indigo-500/10 rounded-full blur-3xl -mr-16 -mt-16 transition-all group-hover:bg-indigo-500/20`}></div>
+            
+            <div className="relative flex items-center justify-between">
+                <div>
+                    <div className="flex items-center gap-2 mb-2">
+                        <div className="p-1.5 rounded-lg bg-indigo-500/10 text-indigo-500">
+                             <Clock size={16} />
+                        </div>
+                        <span className="text-xs font-bold uppercase tracking-wider text-indigo-500">{t.monthlyOvertime}</span>
+                    </div>
+                    <h3 className="text-4xl font-black tracking-tight mb-1">{formatMoney(currentMonthOvertime)}</h3>
+                    <p className="text-xs opacity-60 font-medium">{t.overtimeEarned}</p>
+                </div>
+                
+                <div className={`w-14 h-14 rounded-[1.2rem] flex items-center justify-center shadow-lg transition-transform group-hover:rotate-90 ${darkMode ? 'bg-indigo-500 text-white shadow-indigo-500/20' : 'bg-black text-white shadow-indigo-200'}`}>
+                    <Plus size={28} />
+                </div>
+            </div>
+            
+             <div className="mt-5 pt-4 border-t border-dashed border-gray-200 dark:border-gray-700 flex items-center justify-between">
+                 <span className="text-xs font-bold opacity-60">{t.addToToday}</span>
+                 <span className={`text-[10px] font-bold px-3 py-1.5 rounded-lg ${darkMode ? 'bg-indigo-500/20 text-indigo-300' : 'bg-indigo-50 text-indigo-600'}`}>{t.quickAdd}</span>
+             </div>
+        </div>
+        
+        <p className="text-center text-xs opacity-40 px-6 leading-relaxed">
+            {t.calendarHint}
+        </p>
       </div>
-      <CalendarView currentDate={currentDate} transactions={transactions} currency={currency} language={language} onDateClick={handleDateClick} darkMode={darkMode} />
-    </div>
-  );
+    );
+  };
 
   const SettingsScreen = () => (
-    <div className={`space-y-6 pb-24 transition-all duration-300 ease-in-out ${isAnimating ? 'opacity-0 translate-y-4' : 'opacity-100 translate-y-0'}`}>
+    <div className={`space-y-6 pb-32 transition-all duration-300 ease-in-out ${isAnimating ? 'opacity-0 translate-y-4' : 'opacity-100 translate-y-0'}`}>
       <header className="px-2"><h1 className="text-2xl font-black">{t.settingsTitle}</h1><p className="text-sm opacity-60">{t.settingsSubtitle}</p></header>
       
       {/* GÖRÜNÜM (KARANLIK MOD) */}
@@ -663,7 +750,6 @@ export default function FinanceApp() {
                type="text" 
                value={monthlyNetSalary} 
                onChange={handleSalaryChange} 
-               onBlur={handleSalaryBlur} 
                placeholder="0" 
                className={`w-full bg-transparent border-none text-xl font-bold focus:ring-0 outline-none p-0 ${darkMode ? 'text-white' : 'text-gray-900'}`} 
              />
@@ -787,9 +873,42 @@ export default function FinanceApp() {
            </div>
         </div>
       </div>
+      
+      {/* RESET APP BUTTON */}
+      <div className="mt-8 pt-6 border-t border-gray-200/50">
+        <button 
+          onClick={() => setShowResetModal(true)}
+          className={`w-full flex items-center justify-between p-4 rounded-[2rem] border transition-all hover:scale-[1.02] active:scale-[0.98] ${darkMode ? 'bg-red-500/10 border-red-500/20 text-red-500 hover:bg-red-500/20' : 'bg-red-50 border-red-100 text-red-500 hover:bg-red-100'}`}
+        >
+          <div className="flex items-center gap-3">
+            <div className={`p-2 rounded-xl ${darkMode ? 'bg-red-500/20' : 'bg-red-100'}`}>
+              <RotateCcw size={24} />
+            </div>
+            <div className="text-left">
+              <h3 className="font-bold">{t.resetAppTitle}</h3>
+            </div>
+          </div>
+          <ChevronRight size={20} />
+        </button>
+      </div>
 
     </div>
   );
+
+  // --- SPLASH SCREEN RENDER ---
+  if (showSplash) {
+    return (
+      <div className={`fixed inset-0 z-[100] flex flex-col items-center justify-center ${darkMode ? 'bg-gray-900 text-white' : 'bg-[#F8F9FA] text-gray-900'}`}>
+        <div className="flex flex-col items-center animate-in zoom-in-95 slide-in-from-bottom-4 duration-700 fade-in">
+          <div className={`w-28 h-28 rounded-[2.5rem] flex items-center justify-center shadow-2xl mb-8 ${darkMode ? 'bg-white text-black shadow-white/10' : 'bg-black text-white shadow-xl shadow-gray-300'}`}>
+            <Wallet size={56} strokeWidth={2} />
+          </div>
+          <h1 className="text-4xl font-black tracking-tighter mb-3">{t.appTitle}</h1>
+          <p className="text-xs font-bold uppercase tracking-[0.3em] opacity-40">{t.appSubtitle}</p>
+        </div>
+      </div>
+    );
+  }
 
   if (showOnboarding) {
     return (
@@ -816,7 +935,7 @@ export default function FinanceApp() {
       <NotificationToast message={toastMessage} visible={toastVisible} onClose={() => setToastVisible(false)} darkMode={darkMode} />
       <div className={`w-full max-w-md min-h-screen relative flex flex-col shadow-2xl ${themeClass}`}>
         
-        <div className={`sticky top-0 backdrop-blur-xl z-20 px-6 pt-12 pb-4 flex justify-between items-center ${darkMode ? 'bg-gray-900/90' : 'bg-[#F8F9FA]/90'}`}>
+        <div className={`sticky top-0 backdrop-blur-xl z-20 px-6 pt-[calc(env(safe-area-inset-top)+1.5rem)] pb-4 flex justify-between items-center ${darkMode ? 'bg-gray-900/90' : 'bg-[#F8F9FA]/90'}`}>
           <div className="flex items-center gap-3"><div className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold shadow-lg ${darkMode ? 'bg-white text-black' : 'bg-black text-white'}`}><Wallet size={20} /></div><div><span className="font-black text-xl tracking-tight block leading-none">{t.appTitle}</span><span className="text-[10px] font-bold uppercase tracking-widest opacity-50">{t.appSubtitle}</span></div></div>
           <button onClick={() => setActiveTab('settings')} className={`p-2.5 border rounded-xl transition-colors shadow-sm ${darkMode ? 'bg-gray-800 border-gray-700 hover:bg-gray-700' : 'bg-white border-gray-100 hover:bg-gray-50'}`}><Settings size={20} className="opacity-70" /></button>
         </div>
@@ -828,7 +947,7 @@ export default function FinanceApp() {
           {activeTab === 'settings' && <SettingsScreen />}
         </main>
 
-        <div className={`fixed bottom-0 w-full max-w-md backdrop-blur-lg border-t px-6 py-4 flex items-center justify-between z-30 pb-8 rounded-t-[2.5rem] shadow-[0_-10px_40px_-15px_rgba(0,0,0,0.1)] ${darkMode ? 'bg-gray-900/90 border-gray-800' : 'bg-white/90 border-gray-100'}`}>
+        <div className={`fixed bottom-0 w-full max-w-md backdrop-blur-lg border-t px-6 py-4 flex items-center justify-between z-30 pb-[calc(env(safe-area-inset-bottom)+1.5rem)] rounded-t-[2.5rem] shadow-[0_-10px_40px_-15px_rgba(0,0,0,0.1)] ${darkMode ? 'bg-gray-900/90 border-gray-800' : 'bg-white/90 border-gray-100'}`}>
            <IconButton icon={Home} active={activeTab === 'home'} onClick={() => setActiveTab('home')} darkMode={darkMode} />
            <IconButton icon={PieChart} active={activeTab === 'analysis'} onClick={() => setActiveTab('analysis')} darkMode={darkMode} />
            <button onClick={() => { setEditingTransaction(null); setShowModal(true); }} className={`mb-10 w-16 h-16 rounded-[1.5rem] shadow-2xl flex items-center justify-center hover:scale-105 active:scale-95 transition-all rotate-0 hover:rotate-90 ${darkMode ? 'bg-white text-black shadow-white/20' : 'bg-black text-white shadow-gray-400'}`}><Plus size={32} strokeWidth={2.5} /></button>
@@ -947,6 +1066,21 @@ export default function FinanceApp() {
               <div className="w-16 h-16 bg-red-500/10 text-red-500 rounded-2xl flex items-center justify-center mx-auto mb-4"><AlertTriangle size={32} /></div>
               <h3 className="text-xl font-black mb-2">{t.deleteTitle}</h3><p className="text-sm opacity-60 font-medium mb-6 leading-relaxed"><span className="font-bold">"{transactionToDelete?.title}"</span> {t.deleteDesc}</p>
               <div className="flex gap-3"><button onClick={() => setShowDeleteModal(false)} className={`flex-1 py-3 rounded-xl font-bold text-sm transition-colors ${darkMode ? 'bg-gray-700 hover:bg-gray-600 text-gray-300' : 'bg-gray-100 hover:bg-gray-200 text-gray-600'}`}>{t.cancel}</button><button onClick={performDelete} className="flex-1 py-3 bg-red-500 text-white rounded-xl font-bold text-sm hover:bg-red-600 shadow-lg shadow-red-200 transition-colors">{t.delete}</button></div>
+            </div>
+          </div>
+        )}
+
+        {/* Reset App Modal */}
+        {showResetModal && (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+            <div className={`w-full max-w-xs rounded-[2rem] p-6 shadow-2xl animate-in zoom-in-95 duration-200 text-center ${darkMode ? 'bg-gray-800 text-white' : 'bg-white text-gray-900'}`}>
+              <div className="w-16 h-16 bg-red-500/10 text-red-500 rounded-2xl flex items-center justify-center mx-auto mb-4"><RotateCcw size={32} /></div>
+              <h3 className="text-xl font-black mb-2">{t.resetConfirmTitle}</h3>
+              <p className="text-sm opacity-60 font-medium mb-6 leading-relaxed">{t.resetConfirmDesc}</p>
+              <div className="flex flex-col gap-2">
+                <button onClick={performAppReset} className="w-full py-3 bg-red-500 text-white rounded-xl font-bold text-sm hover:bg-red-600 shadow-lg shadow-red-200 transition-colors">{t.resetConfirmBtn}</button>
+                <button onClick={() => setShowResetModal(false)} className={`w-full py-3 rounded-xl font-bold text-sm transition-colors ${darkMode ? 'bg-gray-700 hover:bg-gray-600 text-gray-300' : 'bg-gray-100 hover:bg-gray-200 text-gray-600'}`}>{t.cancel}</button>
+              </div>
             </div>
           </div>
         )}

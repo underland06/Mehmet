@@ -48,7 +48,7 @@ const Onboarding: React.FC<OnboardingProps> = ({
   const cardBgClass = darkMode ? 'bg-gray-800' : 'bg-gray-50';
 
   return (
-    <div className={`fixed inset-0 z-50 flex flex-col items-center justify-between p-8 animate-in fade-in duration-500 ${bgClass}`}>
+    <div className={`fixed inset-0 z-50 flex flex-col items-center justify-between px-8 pt-[calc(env(safe-area-inset-top)+2rem)] pb-[calc(env(safe-area-inset-bottom)+2rem)] animate-in fade-in duration-500 ${bgClass}`}>
       <div className="w-full flex justify-end">
         <button onClick={onSkip} className="text-sm font-bold opacity-50 px-4 py-2 hover:opacity-100">{t.skip}</button>
       </div>

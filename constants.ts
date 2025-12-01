@@ -119,7 +119,20 @@ export const TRANSLATIONS: Translations = {
     paymentSoon: 'gün sonra ödemesi var!',
     alertSubtitle: 'Bugün ve seçilen gün kadar önce hatırlat',
     salarySettings: 'Maaş Hesaplama',
-    notificationSettings: 'Ödeme Bildirimleri'
+    notificationSettings: 'Ödeme Bildirimleri',
+    
+    // CALENDAR UI
+    monthlyOvertime: 'Aylık Mesai',
+    overtimeEarned: 'Kazanılan Mesai',
+    quickAdd: 'Hızlı Ekle',
+    addToToday: 'Bugüne Ekle',
+    calendarHint: 'Geçmiş tarihe mesai eklemek için takvimden günü seçin.',
+
+    // RESET APP
+    resetAppTitle: 'Uygulamayı Sıfırla',
+    resetConfirmTitle: 'Tüm Veriler Silinecek!',
+    resetConfirmDesc: 'Tüm işlemleriniz, ayarlarınız ve verileriniz kalıcı olarak silinecek. Uygulama ilk kurulum ekranına dönecek. Onaylıyor musunuz?',
+    resetConfirmBtn: 'Evet, Hepsini Sil'
   },
   en: {
     balanceTitle: 'BALANCE & ACTIVITY',
@@ -231,6 +244,19 @@ export const TRANSLATIONS: Translations = {
     paymentSoon: 'days before!',
     alertSubtitle: 'Remind today & before',
     salarySettings: 'Salary Calculation',
-    notificationSettings: 'Payment Notifications'
+    notificationSettings: 'Payment Notifications',
+
+    // CALENDAR UI
+    monthlyOvertime: 'Monthly Overtime',
+    overtimeEarned: 'Earned Overtime',
+    quickAdd: 'Quick Add',
+    addToToday: 'Add to Today',
+    calendarHint: 'Select a day from calendar to add overtime for a past date.',
+    
+    // RESET APP
+    resetAppTitle: 'Reset App Data',
+    resetConfirmTitle: 'All Data Will Be Deleted!',
+    resetConfirmDesc: 'All your transactions, settings and data will be permanently deleted. The app will return to the initial setup screen. Do you confirm?',
+    resetConfirmBtn: 'Yes, Delete All'
   }
 };
